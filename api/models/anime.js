@@ -69,16 +69,19 @@ var animeSchema = new mongoose.Schema({
   },
   title: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   japanese: {
     type: String,
-    'default': ''
+    'default': '',
+    trim: true
   },
   type: {
     type: String,
     required: true,
-    'enum': animeTypes
+    'enum': animeTypes,
+    trim: true
   },
   episodes: {
     type: Number,
@@ -93,7 +96,8 @@ var animeSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    'enum': animeStatuses
+    'enum': animeStatuses,
+    trim: true
   },
   aired: {
     start: Date,
@@ -101,11 +105,13 @@ var animeSchema = new mongoose.Schema({
   },
   rating: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   synopsis: {
     type: String,
-    'default': ''
+    'default': '',
+    trim: true
   },
   genres: [{type: String, 'enum': animeGenres}],
   producers: [String],
@@ -114,7 +120,7 @@ var animeSchema = new mongoose.Schema({
     original: String,
     thumbnail: String
   },
-  meta: {
+  _meta: {
     createdAt: {
       type: Date,
       'default': Date.now,
@@ -128,6 +134,38 @@ var animeSchema = new mongoose.Schema({
     }
   }
 });
+
+animeSchema.pre('save', function (next) {
+  this._meta.updatedAt = Date.now;
+  next();
+});
+
+animeSchema.methods.setMultiple = function (data) {
+
+  if (data.myanimelist) this.myanimelist = data.myanimelist;
+  if (data.title) this.title = data.title;
+  if (data.japanese) this.japanese = data.japanese;
+  if (data.type) this.type = data.type;
+  if (data.episodes) this.episodes = data.episodes;
+  if (data.duration) this.duration = data.duration;
+  if (data.status) this.status = data.status;
+  
+/*
+  if (data.aired.start) {
+    this.aired.start = new Date(data.aired.,,);
+  }
+  if (data.aired.end) {
+    this.aired.end = data.aired.end;
+  }
+  if (data.rating) this.rating = data.rating;
+  if (data.synopsis) this.synopsis = data.synopsis;
+
+  this.genres = [];
+  this.producers = [];
+  this.tags = [];
+*/
+
+}
 
 animeSchema.statics.types = function () {
   return animeTypes;
@@ -150,7 +188,7 @@ animeSchema.statics.fetch = function (id, callback) {
         , $ = cheerio.load(body);
 
       if ($('div').hasClass('badresult')) {
-        callback(true, null);
+        callback(null);
         return;
       }
 
@@ -242,11 +280,37 @@ animeSchema.statics.fetch = function (id, callback) {
           data.synopsis = $(this).remove().parent().text().trim();
         }
       });
-      callback(false, data);
+      callback(data);
     } else {
-      callback(true, null);
+      callback(null);
     }
   });
 }
 
-module.exports = mongoose.model('Anime', animeSchema);
+var Anime = mongoose.model('Anime', animeSchema);
+
+Anime.schema.path('myanimelist').validate(function (value) {
+  return value > 0;
+}, 'Invalid myanimelist id value.');
+
+Anime.schema.path('title').validate(function (value) {
+  return value.length > 0;
+}, 'Title is required.');
+
+Anime.schema.path('type').validate(function (value) {
+  return animeTypes.indexOf(value) >= 0;
+}, 'Invalid type value. should be ' + animeTypes.join(', ') + '.');
+
+Anime.schema.path('episodes').validate(function (value) {
+  return value >= 0;
+}, 'Invalid episodes value, should be a positive number.');
+
+Anime.schema.path('duration').validate(function (value) {
+  return value >= 0;
+}, 'Invalid duration value, should be a positive number.');
+
+Anime.schema.path('status').validate(function (value) {
+  return animeStatuses.indexOf(value) >= 0;
+}, 'Invalid status value. should be ' + animeStatuses.join(', ') + '.');
+
+module.exports = Anime;
