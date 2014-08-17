@@ -6,6 +6,7 @@
 var express = require('express')
   , http = require('http')
   , path = require('path')
+  , lessMiddleware = require('less-middleware')
   , mongoose = require('mongoose');
 
 var app = express();
@@ -22,7 +23,7 @@ app.use(express.methodOverride());
 app.use(express.cookieParser('dhj892748iu892ajsk29lpjd6j2v8wh'));
 app.use(express.session());
 app.use(app.router);
-app.use(require('less-middleware')({ src: __dirname + '/public' }));
+app.use(lessMiddleware(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // development only
